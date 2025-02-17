@@ -1,0 +1,114 @@
+<link rel="stylesheet" href="assets/document.css">
+
+<div class="document-page">
+  <div class="document-header">
+    <button class="menu-toggle" {{action "toggleMenu"}}>☰</button>
+    <button class="header-button" {{action "saveDocument"}}>Save</button>
+    <button class="header-button" {{action "saveAsWord"}}>Save As</button>
+
+    <h2 class="document-title"
+        contenteditable={{unless isViewer "true" "false"}}
+        oninput={{action "trackTitleChange"}}
+        onblur={{action "updateTitle"}}>
+      {{documentTitle}}
+    </h2>
+
+    {{#if lastUpdatedMessage}}
+      <div class="last-updated-message">
+        {{lastUpdatedMessage}}
+      </div>
+    {{/if}}
+
+    &nbsp;&nbsp;
+
+    {{#unless isViewer}}
+      <button class="share" {{action "openSharePopup"}}>Share</button>
+      <button class="favorite" {{action "toggleFavorite"}}>
+        {{#if isFavorited}}
+          ❤️
+        {{else}}
+          ♡
+        {{/if}}
+      </button>
+    {{/unless}}
+  </div>
+
+  <div id="sidebar" class="sidebar">
+    <button id="close-sidebar" class="close-sidebar" {{action "toggleMenu"}}>&times;</button>
+    <div class="sidebar-content">
+      <br>
+      <label>Font Style</label>
+      <select id="font-style">
+        <option value="Arial">Arial</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Verdana">Verdana</option>
+      </select>
+
+      <label>Text Color</label>
+      <input type="color" id="font-color">
+
+      <label>Font Size</label>
+      <input type="number" id="font-size" min="10" max="50" value="16">
+
+      <label>Alignment</label>
+      <div class="alignment-buttons">
+        <button data-align="left">Left</button>
+        <button data-align="center">Center</button>
+        <button data-align="right">Right</button>
+      </div>
+
+      <label>Spacing</label>
+      <input type="range" id="spacing" min="0" max="50" value="10">
+    </div>
+  </div>
+ <div class="document-container">
+  <div class="document-editor" contenteditable={{unless isViewer "true" "false"}} oninput={{action "updateContent"}}>
+    {{{documentContent}}}
+  </div>
+ </div>
+</div>
+
+<div id="share-popup" class="popup" style="display: none;">
+  <div class="popup-content">
+    <button class="close-popup" {{action "closeSharePopup"}}>&times;</button>
+    <h3 class="popup-title">
+      <span>Share</span>
+      <span class="doc-name">{{documentTitle}}</span>
+    </h3>
+    <div class="input-group">
+      <input type="text" id="email" placeholder="Add members by their email address or from a group" oninput={{action "handleEmailInput"}}>
+      <select class="access-level">
+        <option value="Viewer" selected>View</option>
+        <option value="Editor">Edit</option>
+      </select>
+      <button class="share-button" {{action "shareDocument"}}>Share</button>
+    </div>
+    <div id="email-dropdown" class="email-dropdown" style="display: none;">
+      {{#each filteredUsers as |user|}}
+        <div class="dropdown-item" {{action "selectEmail" user}}>{{user}}</div>
+      {{/each}}
+    </div>
+
+    <hr class="divider">
+    <div class="who-can-access">
+      <label>Who can access</label>
+      <a href="#" class="external-link">New external share link</a>
+    </div>
+    <div class="permalink">
+      <span class="permalink-icon">🔗</span>
+      <span>Permalink - Private, not shared with anyone</span>
+    </div>
+    <div class="visibility">
+      <span class="visibility-icon">⚙️</span>
+      <button class="change-visibility" {{action "changeVisibility"}}>Change Visibility</button>
+    </div>
+  </div>
+</div>
+
+<!-- Success Popup -->
+<div id="success-popup" class="popup" style="display: none;">
+  <div class="popup-content">
+    <span class="checkmark"></span>
+    <h3>Document Shared Successfully!</h3>
+  </div>
+</div>

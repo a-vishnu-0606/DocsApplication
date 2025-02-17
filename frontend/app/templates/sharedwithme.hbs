@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="assets/dashboard.css">
+
+<div class="dashboard-page">
+  {{render 'sidebar'}}
+
+  <div class="dashboard-content">
+    <div class="top-bar">
+      <input type="text" placeholder="Search documents..." class="search-bar" value={{searchQuery}} oninput={{action "updateSearchQuery" value="target.value"}}>
+      <button {{action "createDocument"}} class="create-button"> Create New</button>
+
+      <div class="user-profile" {{action "toggleProfilePopup"}}>
+        <img src="assets/profile-placeholder.jpg" alt="User">
+      </div>
+
+      {{#if isProfilePopupVisible}}
+        <div class="profile-popup">
+          <button class="close-popup" {{action "toggleProfilePopup"}}>✖</button>
+          <img src="assets/profile-placeholder.jpg" alt="User" class="profile-img">
+
+          <div class="user-details">
+            <p> {{username}}</p>
+            <p><strong>Email:</strong> {{email}}</p>
+          </div>
+
+          <button class="logout-button" {{action "logout"}}>Sign Out</button>
+        </div>
+      {{/if}}
+
+    </div>
+    <hr class="solid1">
+    <br>
+
+    <h2>Shared with Me</h2>
+    <div class="documents-grid">
+      {{#each filteredDocuments as |doc|}}
+        <div class="document-card" {{action "openDocument" doc.uniqueId}}>
+          <div class="document-thumbnail"></div>
+          <p>{{doc.title}}</p>
+        </div>
+      {{else}}
+        <p>No shared documents found.</p>
+      {{/each}}
+    </div>
+  </div>
+</div>
