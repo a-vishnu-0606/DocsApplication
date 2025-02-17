@@ -55,8 +55,8 @@ public class SendShareEmailServlet extends HttpServlet {
     }
 
     private void sendEmail(String email, String documentId, String accessLevel) {
-        final String username = System.getProperty("EMAIL_USERNAME", System.getenv("EMAIL_USERNAME")); // Get email from system property or environment variable
-        final String password = System.getProperty("EMAIL_PASSWORD", System.getenv("EMAIL_PASSWORD")); // Get password from system property or environment variable
+        final String username = System.getProperty("EMAIL_USERNAME", System.getenv("EMAIL_USERNAME"));
+        final String password = System.getProperty("EMAIL_PASSWORD", System.getenv("EMAIL_PASSWORD"));
 
         Properties props = new Properties();
         props.put("mail.smtp.auth", "true");

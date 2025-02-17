@@ -25,9 +25,7 @@ export default Ember.Controller.extend({
     this.validateSession();
 
     setInterval(() => {
-      if (this.username) {
-        this.loadUserDocuments(this.username);
-      }
+      this.loadUserDocuments();
     }, 5000);
   },
 

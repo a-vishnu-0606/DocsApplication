@@ -30,7 +30,9 @@
     <hr class="solid1">
     <br>
 
-    <h2>Shared with Me</h2>
+    <h2>Shared with Me
+      <span class="refresh-icon" {{action "refreshDocuments"}}>🔄</span>
+    </h2>
     <div class="documents-grid">
       {{#each filteredDocuments as |doc|}}
         <div class="document-card" {{action "openDocument" doc.uniqueId}}>

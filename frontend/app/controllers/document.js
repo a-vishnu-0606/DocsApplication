@@ -209,7 +209,7 @@ export default Ember.Controller.extend({
       success: (response) => {
         if (response.status === "success") {
           this.set('documentContent', response.content);
-          this.set('lastSavedContent', response.content); // Initialize last saved content
+          this.set('lastSavedContent', response.content);
         } else {
           console.warn("Failed to load document content:", response.message);
         }
@@ -255,7 +255,7 @@ export default Ember.Controller.extend({
           if (response.status === "success") {
             const lastUpdated = new Date(response.last_updated);
             this.updateLastUpdatedMessage(lastUpdated);
-            this.set('lastSavedContent', content); // Update last saved content
+            this.set('lastSavedContent', content);
           } else {
             console.warn("Failed to save document content:", response.message);
             this.set('lastUpdatedMessage', "Failed to save document.");
@@ -526,7 +526,6 @@ export default Ember.Controller.extend({
         xhrFields: { withCredentials: true },
         success: (response) => {
           if (response.status === "success") {
-            // Send email to the user
             this.sendShareEmail(email, documentId, accessLevel);
 
             Ember.$('#success-popup').show();

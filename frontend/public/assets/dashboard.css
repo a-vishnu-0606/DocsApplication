@@ -241,4 +241,12 @@ hr.solid1 {
   margin-bottom: 10px;
 }
 
+.refresh-icon {
+  cursor: pointer;
+  margin-left: 10px;
+  font-size: 20px;
+}
 
+.refresh-icon:hover {
+  color: #007bff;
+}

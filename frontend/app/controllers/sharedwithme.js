@@ -1,4 +1,4 @@
-/* globals alert,setInterval,sessionStorage */
+/* globals alert,sessionStorage */
 
 import Ember from 'ember';
 
@@ -24,11 +24,11 @@ export default Ember.Controller.extend({
     this._super(...arguments);
     this.validateSession();
 
-    setInterval(() => {
-      if (this.username) {
-        this.loadSharedDocuments();
-      }
-    }, 5000);
+    // setInterval(() => {
+    //   if (this.username) {
+    //     this.loadSharedDocuments();
+    //   }
+    // }, 5000);
   },
 
   validateSession() {
@@ -92,6 +92,9 @@ export default Ember.Controller.extend({
   },
 
   actions: {
+    refreshDocuments() {
+      this.loadSharedDocuments();
+    },
     toggleProfilePopup() {
       this.toggleProperty('isProfilePopupVisible');
     },

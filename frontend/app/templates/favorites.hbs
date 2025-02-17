@@ -30,7 +30,9 @@
     <hr class="solid1">
     <br>
 
-    <h2>Favourite Documents</h2>
+    <h2>Favourite Documents
+      <span class="refresh-icon" {{action "refreshDocuments"}}>🔄</span>
+    </h2>
     <div class="documents-grid">
       {{#each filteredFavouriteDocuments as |doc|}}
         <div class="document-card" {{action "openDocument" doc.uniqueId}}>
