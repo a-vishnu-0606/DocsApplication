@@ -1,5 +1,4 @@
-/* globals alert,setInterval,sessionStorage */
-
+/* globals alert,sessionStorage,setInterval,event */
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
@@ -8,6 +7,7 @@ export default Ember.Controller.extend({
   email: null,
   userDocuments: [],
   searchQuery: '',
+  documentToDelete: null,
 
   filteredDocuments: Ember.computed('userDocuments.[]', 'searchQuery', function() {
     const searchQuery = this.get('searchQuery').toLowerCase();
@@ -85,7 +85,48 @@ export default Ember.Controller.extend({
     });
   },
 
+  deleteDocument(document) {
+    const email = this.get('email');
+    const uniqueId = document.uniqueId;
+
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/DeleteDocumentServlet',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ email, uniqueId }),
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: () => {
+        this.loadUserDocuments();
+      },
+      error: () => {
+        alert("Error deleting document.");
+      }
+    });
+  },
+
   actions: {
+    confirmDelete(document) {
+      event.stopPropagation();
+      this.set('documentToDelete', document);
+    },
+
+    deleteDocumentConfirmed() {
+      const document = this.get('documentToDelete');
+      if (document) {
+        this.deleteDocument(document);
+        this.set('documentToDelete', null);
+      }
+    },
+
+    cancelDelete() {
+      this.set('documentToDelete', null);
+    },
+
     toggleProfilePopup() {
       this.toggleProperty('isProfilePopupVisible');
     },

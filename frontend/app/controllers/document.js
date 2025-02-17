@@ -16,6 +16,8 @@ export default Ember.Controller.extend({
   lastUpdatedMessage: null,
   isFavorited: false,
   lastSavedContent: null,
+  hasUnsavedChanges: false,
+
 
   init() {
     this._super(...arguments);
@@ -30,6 +32,13 @@ export default Ember.Controller.extend({
             this.fetchAllUsers();
             this.initWebSocket(documentId);
             this.checkIfFavorited(documentId);
+
+            window.addEventListener('beforeunload', (event) => {
+              if (this.get('hasUnsavedChanges')) {
+                event.preventDefault();
+                return 'You have unsaved changes. Are you sure you want to leave?';
+              }
+            });
           } else {
             console.log("Document does not exist.");
           }
@@ -39,6 +48,14 @@ export default Ember.Controller.extend({
       console.error("Error during session validation:", error);
     });
   },
+
+
+  willDestroy() {
+    this._super(...arguments);
+
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+  },
+
 
   checkIfFavorited(documentId) {
     const loggedInUserEmail = this.get('loggedInUserEmail');
@@ -256,6 +273,7 @@ export default Ember.Controller.extend({
             const lastUpdated = new Date(response.last_updated);
             this.updateLastUpdatedMessage(lastUpdated);
             this.set('lastSavedContent', content);
+            this.set('hasUnsavedChanges', false);
           } else {
             console.warn("Failed to save document content:", response.message);
             this.set('lastUpdatedMessage', "Failed to save document.");
@@ -554,6 +572,7 @@ export default Ember.Controller.extend({
 
       const content = Ember.$('.document-editor').html();
       this.sendContentUpdate(content);
+      this.set('hasUnsavedChanges', true);
     },
 
     saveDocument() {

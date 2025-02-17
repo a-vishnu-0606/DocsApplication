@@ -1,3 +1,11 @@
-
+{{#if isIndexRoute}}
+  <div class="container1">
+    <h1>Welcome to Document Writer Application</h1>
+    <div class="buttons1">
+      <button class="but" {{action "navigateTo" "login"}}>Go to Login</button>
+      <button class="but" {{action "navigateTo" "signup"}}>Go to Signup</button>
+    </div>
+  </div>
+{{/if}}
 
 {{outlet}}
