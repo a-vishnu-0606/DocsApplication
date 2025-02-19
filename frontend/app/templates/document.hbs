@@ -23,6 +23,8 @@
 
 
     {{#unless isViewer}}
+      <button class="view" {{action "viewSharedUsers"}}>View</button>
+      &nbsp; &nbsp;
       <button class="share" {{action "openSharePopup"}}>Share</button>
       <button class="favorite" {{action "toggleFavorite"}}>
         {{#if isFavorited}}
@@ -62,11 +64,35 @@
       <input type="range" id="spacing" min="0" max="50" value="10">
     </div>
   </div>
- <div class="document-container">
-  <div class="document-editor" contenteditable={{unless isViewer "true" "false"}} oninput={{action "updateContent"}}>
-    {{{documentContent}}}
+  <div class="document-container">
+    <div class="document-editor" contenteditable={{unless isViewer "true" "false"}} oninput={{action "updateContent"}}>
+      {{{documentContent}}}
+    </div>
+    <div class="typing-indicators">
+      {{#each typingUsers as |user|}}
+        <div class="typing-indicator" data-user="{{user}}" style="position: absolute; display: none;">
+          <span class="user-email">{{user}}</span> is typing...
+        </div>
+      {{/each}}
+    </div>
   </div>
- </div>
+</div>
+
+<div id="shared-users-popup" class="popup" style="display: none;">
+  <div class="popup-content">
+    <button class="close-popup" {{action "closeSharedUsersPopup"}}>&times;</button>
+    <h3 class="popup-title">Shared Users</h3>
+    <div class="shared-users-list">
+      {{#each sharedUsers as |user|}}
+        <div class="shared-user">
+          <span class="user-email">{{user.email}}</span>
+          <span class="user-role">-   &nbsp;&nbsp;{{user.role}}</span>
+        </div>
+      {{else}}
+        <div class="no-users">No users have access to this document.</div>
+      {{/each}}
+    </div>
+  </div>
 </div>
 
 <div id="share-popup" class="popup" style="display: none;">
@@ -98,10 +124,6 @@
     <div class="permalink">
       <span class="permalink-icon">🔗</span>
       <span>Permalink - Private, not shared with anyone</span>
-    </div>
-    <div class="visibility">
-      <span class="visibility-icon">⚙️</span>
-      <button class="change-visibility">Change Visibility</button>
     </div>
   </div>
 </div>

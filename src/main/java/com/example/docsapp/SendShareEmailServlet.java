@@ -2,6 +2,8 @@ package com.example.docsapp;
 
 import java.io.IOException;
 import java.util.Properties;
+
+import com.google.gson.JsonObject;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.PasswordAuthentication;
@@ -14,7 +16,10 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.json.JSONObject;
+
+import static java.lang.System.out;
 
 @WebServlet("/SendShareEmailServlet")
 public class SendShareEmailServlet extends HttpServlet {
@@ -28,6 +33,17 @@ public class SendShareEmailServlet extends HttpServlet {
 
 
         JSONObject jsonResponse = new JSONObject();
+
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("email") == null) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "Session not found or invalid.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 

@@ -1,4 +1,4 @@
-/* globals alert,sessionStorage,setInterval,event */
+/* globals alert,sessionStorage,setInterval,FileReader,mammoth,event */
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
@@ -8,6 +8,8 @@ export default Ember.Controller.extend({
   userDocuments: [],
   searchQuery: '',
   documentToDelete: null,
+  notifications: [],
+  isNotificationsVisible: false,
 
   filteredDocuments: Ember.computed('userDocuments.[]', 'searchQuery', function() {
     const searchQuery = this.get('searchQuery').toLowerCase();
@@ -20,13 +22,38 @@ export default Ember.Controller.extend({
     return userDocuments.filter(doc => doc.title.toLowerCase().includes(searchQuery));
   }),
 
+  unreadNotificationsCount: Ember.computed('notifications.[]', function() {
+    return this.get('notifications').filterBy('is_read', false).length;
+  }),
+
   init() {
     this._super(...arguments);
     this.validateSession();
 
     setInterval(() => {
       this.loadUserDocuments();
+      this.loadNotifications();
     }, 5000);
+  },
+
+  logoutAndRedirect() {
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/LogoutServlet',
+      type: 'POST',
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: () => {
+        sessionStorage.removeItem('dashboardReloaded');
+        this.transitionToRoute('login');
+      },
+      error: () => {
+        this.transitionToRoute('login');
+      }
+    });
   },
 
   validateSession() {
@@ -52,12 +79,13 @@ export default Ember.Controller.extend({
           }
 
           this.loadUserDocuments(response.username);
+          this.loadNotifications();
         } else {
-          this.transitionToRoute('login');
+          this.logoutAndRedirect();
         }
       },
       error: () => {
-        this.transitionToRoute('login');
+        this.logoutAndRedirect();
       }
     });
   },
@@ -79,8 +107,62 @@ export default Ember.Controller.extend({
       success: (response) => {
         this.set('userDocuments', response.documents);
       },
-      error: () => {
-        alert("Error fetching user documents.");
+      error: (xhr) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        } else {
+          alert("Error fetching user documents.");
+        }
+      }
+    });
+  },
+
+  loadNotifications() {
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/GetNotificationsServlet',
+      type: 'GET',
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: (response) => {
+        if (response.status === "success") {
+          this.set('notifications', response.notifications);
+        } else {
+          console.warn("Failed to fetch notifications:", response.message);
+        }
+      },
+      error: (xhr, status, error) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
+        console.error("AJAX Error:", status, error);
+      }
+    });
+  },
+  markNotificationsAsRead() {
+    const email = this.get('email');
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/MarkNotificationsAsReadServlet',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ email }),
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: () => {
+        this.loadNotifications();
+      },
+      error: (xhr) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
+        console.error("Error marking notifications as read.");
       }
     });
   },
@@ -103,13 +185,74 @@ export default Ember.Controller.extend({
       success: () => {
         this.loadUserDocuments();
       },
-      error: () => {
-        alert("Error deleting document.");
+      error: (xhr) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }else {
+          alert("Error deleting document.");
+        }
+      }
+    });
+  },
+  saveUploadedDocument(title, content) {
+    const email = this.get('email');
+    const uniqueId = this.generateUniqueId();
+
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/UploadDocumentServlet',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ email, uniqueId, title, content }),
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: (response) => {
+        if (response.status === "success") {
+          this.loadUserDocuments();
+          const url = `/document/${uniqueId}`;
+          window.open(url, '_blank');
+        } else {
+          alert("Error saving uploaded document.");
+        }
+      },
+      error: (xhr) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }else {
+          alert("Error saving uploaded document.");
+        }
       }
     });
   },
 
   actions: {
+
+    markNotificationsAsRead() {
+      this.markNotificationsAsRead();
+    },
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const arrayBuffer = e.target.result;
+          mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+            .then((result) => {
+              const content = result.value;
+              const title = file.name.replace(/\.[^/.]+$/, "");
+              this.saveUploadedDocument(title, content);
+            })
+            .catch((error) => {
+              console.error("Error extracting content:", error);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    },
+
     confirmDelete(document) {
       event.stopPropagation();
       this.set('documentToDelete', document);
@@ -126,7 +269,9 @@ export default Ember.Controller.extend({
     cancelDelete() {
       this.set('documentToDelete', null);
     },
-
+    toggleNotifications() {
+      this.toggleProperty('isNotificationsVisible');
+    },
     toggleProfilePopup() {
       this.toggleProperty('isProfilePopupVisible');
     },
@@ -145,7 +290,7 @@ export default Ember.Controller.extend({
           this.transitionToRoute('login');
         },
         error: () => {
-          this.transitionToRoute('login');
+          this.logoutAndRedirect();
         }
       });
     },
@@ -168,8 +313,12 @@ export default Ember.Controller.extend({
         success: () => {
           window.open(url, '_blank');
         },
-        error: () => {
-          alert("Error saving document.");
+        error: (xhr) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }else {
+            alert("Error saving document.");
+          }
         }
       });
     },

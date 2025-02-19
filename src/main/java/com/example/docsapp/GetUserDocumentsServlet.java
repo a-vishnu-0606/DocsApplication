@@ -27,6 +27,16 @@ public class GetUserDocumentsServlet extends HttpServlet {
         response.setContentType("application/json");
         PrintWriter out = response.getWriter();
 
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("email") == null) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "Session not found or invalid.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
         try {
             BufferedReader reader = request.getReader();
             JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();

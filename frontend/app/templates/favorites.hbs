@@ -6,6 +6,18 @@
   <div class="dashboard-content">
     <div class="top-bar">
       <input type="text" placeholder="Search favourite documents..." class="search-bar" value={{searchQuery}} oninput={{action "updateSearchQuery" value="target.value"}}>
+
+      <label for="file-upload" class="upload-button">
+        Upload
+        <input
+          id="file-upload"
+          type="file"
+          style="display: none;"
+          accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          onchange={{action "handleFileUpload"}}
+        >
+      </label>
+
       <button {{action "createDocument"}} class="create-button"> Create New</button>
 
       <div class="user-profile" {{action "toggleProfilePopup"}}>

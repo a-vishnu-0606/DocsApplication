@@ -24,6 +24,11 @@ public class LogoutServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
         JsonObject jsonResponse = new JsonObject();
 
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+
         Cookie jwtCookie = new Cookie("jwt", "");
         jwtCookie.setHttpOnly(true);
         jwtCookie.setSecure(false);

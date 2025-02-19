@@ -24,6 +24,17 @@ public class CheckUserRoleServlet extends HttpServlet {
         response.setContentType("application/json");
         PrintWriter out = response.getWriter();
 
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("email") == null) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "Session not found or invalid.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
+
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             JsonObject json = new JsonParser().parse(request.getReader()).getAsJsonObject();
             String email = json.get("email").getAsString();

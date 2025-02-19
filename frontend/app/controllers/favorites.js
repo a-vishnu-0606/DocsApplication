@@ -1,4 +1,4 @@
-/* globals alert,sessionStorage */
+/* globals alert,sessionStorage,FileReader,mammoth */
 
 import Ember from 'ember';
 
@@ -19,6 +19,26 @@ export default Ember.Controller.extend({
 
     return favouriteDocuments.filter(doc => doc.title.toLowerCase().includes(searchQuery));
   }),
+
+  logoutAndRedirect() {
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/LogoutServlet',
+      type: 'POST',
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: () => {
+        sessionStorage.removeItem('dashboardReloaded');
+        this.transitionToRoute('login');
+      },
+      error: () => {
+        this.transitionToRoute('login');
+      }
+    });
+  },
 
   init() {
     this._super(...arguments);
@@ -55,11 +75,11 @@ export default Ember.Controller.extend({
 
           this.loadFavouriteDocuments(response.username);
         } else {
-          this.transitionToRoute('login');
+          this.logoutAndRedirect();
         }
       },
       error: () => {
-        this.transitionToRoute('login');
+        this.logoutAndRedirect();
       }
     });
   },
@@ -84,13 +104,68 @@ export default Ember.Controller.extend({
           console.warn("Failed to fetch favourite documents:", response.message);
         }
       },
-      error: () => {
-        alert("Error fetching favourite documents.");
+      error: (xhr) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        } else {
+          alert("Error fetching favourite documents.");
+        }
+      }
+    });
+  },
+  saveUploadedDocument(title, content) {
+    const email = this.get('email');
+    const uniqueId = this.generateUniqueId();
+
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/UploadDocumentServlet',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ email, uniqueId, title, content }),
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: (response) => {
+        if (response.status === "success") {
+          const url = `/document/${uniqueId}`;
+          window.open(url, '_blank');
+        } else {
+          alert("Error saving uploaded document.");
+        }
+      },
+      error: (xhr) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }else {
+          alert("Error saving uploaded document.");
+        }
       }
     });
   },
 
   actions: {
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const arrayBuffer = e.target.result;
+          mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+            .then((result) => {
+              const content = result.value;
+              const title = file.name.replace(/\.[^/.]+$/, "");
+              this.saveUploadedDocument(title, content);
+            })
+            .catch((error) => {
+              console.error("Error extracting content:", error);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    },
     refreshDocuments() {
       if (this.username) {
         this.loadFavouriteDocuments(this.username);
@@ -137,8 +212,12 @@ export default Ember.Controller.extend({
         success: () => {
           window.open(url, '_blank');
         },
-        error: () => {
-          alert("Error saving document.");
+        error: (xhr) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }else {
+            alert("Error saving document.");
+          }
         }
       });
     },

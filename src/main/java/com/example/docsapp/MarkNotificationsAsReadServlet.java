@@ -1,7 +1,5 @@
 package com.example.docsapp;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -9,13 +7,14 @@ import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
+import com.google.gson.*;
 
-@WebServlet("/DeleteDocumentServlet")
-public class DeleteDocumentServlet extends HttpServlet {
+@WebServlet("/MarkNotificationsAsReadServlet")
+public class MarkNotificationsAsReadServlet extends HttpServlet {
 
     private static final String DB_URL = System.getProperty("DB_URL", System.getenv("DB_URL"));
-    private static final String DB_USER = System.getProperty("DB_USER", System.getenv("DB_USER"));
-    private static final String DB_PASSWORD = System.getProperty("DB_PASSWORD", System.getenv("DB_PASSWORD"));
+    private static final String DB_USER = System.getProperty("DB_USER", System.getenv("DB_USER"));;
+    private static final String DB_PASSWORD = System.getProperty("DB_PASSWORD", System.getenv("DB_PASSWORD"));;
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
@@ -24,6 +23,8 @@ public class DeleteDocumentServlet extends HttpServlet {
         response.setHeader("Access-Control-Allow-Credentials", "true");
         response.setContentType("application/json");
         PrintWriter out = response.getWriter();
+
+        JsonObject jsonResponse = new JsonObject();
 
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("email") == null) {
@@ -37,34 +38,45 @@ public class DeleteDocumentServlet extends HttpServlet {
 
 
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            JsonObject json = new JsonParser().parse(request.getReader()).getAsJsonObject();
-            String email = json.get("email").getAsString();
-            String uniqueId = json.get("uniqueId").getAsString();
+            JsonParser parser = new JsonParser();
+            JsonObject requestBody = parser.parse(request.getReader()).getAsJsonObject();
 
-            // Delete the document
-            String deleteQuery = "DELETE FROM Documents WHERE uniqueId = ? AND user_id = (SELECT id FROM users WHERE email = ?)";
-            try (PreparedStatement stmt = conn.prepareStatement(deleteQuery)) {
-                stmt.setString(1, uniqueId);
-                stmt.setString(2, email);
-                int rowsAffected = stmt.executeUpdate();
-
-                JsonObject result = new JsonObject();
-                if (rowsAffected > 0) {
-                    result.addProperty("status", "success");
-                    result.addProperty("message", "Document deleted successfully.");
-                } else {
-                    result.addProperty("status", "error");
-                    result.addProperty("message", "Document not found or you do not have permission to delete it.");
-                }
-                out.print(result.toString());
+            String email = requestBody.get("email").getAsString();
+            int userId = getUserIdByEmail(conn, email);
+            if (userId == -1) {
+                jsonResponse.addProperty("status", "error");
+                jsonResponse.addProperty("message", "User not found.");
+                out.print(jsonResponse.toString());
+                return;
             }
+
+            String query = "UPDATE notifications SET is_read = TRUE WHERE user_id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setInt(1, userId);
+                stmt.executeUpdate();
+            }
+
+            jsonResponse.addProperty("status", "success");
+            out.print(jsonResponse.toString());
+
         } catch (Exception e) {
             e.printStackTrace();
-            JsonObject error = new JsonObject();
-            error.addProperty("status", "error");
-            error.addProperty("message", "Database error occurred.");
-            out.print(error.toString());
+            jsonResponse.addProperty("status", "error");
+            jsonResponse.addProperty("message", "Database error occurred.");
+            out.print(jsonResponse.toString());
         }
+    }
+
+    private int getUserIdByEmail(Connection conn, String email) throws SQLException {
+        String query = "SELECT id FROM users WHERE email = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        }
+        return -1;
     }
 
     @Override

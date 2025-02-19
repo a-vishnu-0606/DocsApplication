@@ -1,4 +1,4 @@
-/* globals WebSocket, alert, URL, Blob */
+/* globals WebSocket, alert, URL,sessionStorage,clearTimeout, Blob */
 
 import Ember from 'ember';
 
@@ -17,6 +17,62 @@ export default Ember.Controller.extend({
   isFavorited: false,
   lastSavedContent: null,
   hasUnsavedChanges: false,
+  sharedUsers: [],
+  typingUsers: [],
+
+  setupTypingIndicators() {
+    let typingTimeout;
+    const editor = Ember.$('.document-editor');
+    const typingIndicators = Ember.$('.typing-indicators');
+
+    editor.on('input', () => {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        typingIndicators.css({
+          top: rect.top + window.scrollY + rect.height,
+          left: rect.left + window.scrollX
+        });
+
+        if (typingTimeout) {
+          clearTimeout(typingTimeout);
+        }
+
+        typingTimeout = setTimeout(() => {
+          const socket = this.get('socket');
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'typingIndicator',
+              userEmail: this.get('loggedInUserEmail'),
+              isTyping: false
+            }));
+          }
+        }, 10000);
+      }
+    });
+  },
+
+  logoutAndRedirect() {
+    Ember.$.ajax({
+      url: 'http://localhost:8080/DocsApp_war_exploded/LogoutServlet',
+      type: 'POST',
+      headers: {
+        'X-CSRF-Token': this.get('csrfToken')
+      },
+      xhrFields: {
+        withCredentials: true
+      },
+      success: () => {
+        sessionStorage.removeItem('dashboardReloaded');
+        this.transitionToRoute('login');
+      },
+      error: () => {
+        this.transitionToRoute('login');
+      }
+    });
+  },
 
 
   init() {
@@ -32,6 +88,7 @@ export default Ember.Controller.extend({
             this.fetchAllUsers();
             this.initWebSocket(documentId);
             this.checkIfFavorited(documentId);
+            this.setupTypingIndicators();
 
             window.addEventListener('beforeunload', (event) => {
               if (this.get('hasUnsavedChanges')) {
@@ -79,6 +136,9 @@ export default Ember.Controller.extend({
         }
       },
       error: (xhr, status, error) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
         console.error("AJAX Error:", status, error);
       }
     });
@@ -109,6 +169,9 @@ export default Ember.Controller.extend({
         }
       },
       error: (xhr, status, error) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
         console.error("AJAX Error:", status, error);
       }
     });
@@ -144,7 +207,10 @@ export default Ember.Controller.extend({
             resolve(false);
           }
         },
-        error: () => {
+        error: (xhr) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }
           resolve(false);
         }
       });
@@ -210,6 +276,9 @@ export default Ember.Controller.extend({
         }
       },
       error: (xhr, status, error) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
         console.error("AJAX Error:", status, error);
       }
     });
@@ -232,6 +301,9 @@ export default Ember.Controller.extend({
         }
       },
       error: (xhr, status, error) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
         console.error("AJAX Error:", status, error);
       }
     });
@@ -251,6 +323,9 @@ export default Ember.Controller.extend({
         }
       },
       error: (xhr, status, error) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
         console.error("AJAX Error:", status, error);
       }
     });
@@ -280,6 +355,9 @@ export default Ember.Controller.extend({
           }
         },
         error: (xhr, status, error) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }
           console.error("AJAX Error:", status, error);
           this.set('lastUpdatedMessage', "Error saving document.");
         }
@@ -325,6 +403,8 @@ export default Ember.Controller.extend({
         this.set('documentContent', data.content);
         this.set('lastSavedContent', data.content);
         this.updateEditorContent(data.content);
+      } else if (data.type === 'typingIndicator') {
+        this.handleTypingIndicator(data.userEmail, data.isTyping);
       }
     };
 
@@ -333,6 +413,25 @@ export default Ember.Controller.extend({
     };
 
     this.set('socket', socket);
+  },
+
+  handleTypingIndicator(userEmail, isTyping) {
+    let typingUsers = this.get('typingUsers');
+    if (isTyping) {
+      if (!typingUsers.includes(userEmail)) {
+        typingUsers.pushObject(userEmail);
+      }
+    } else {
+      typingUsers.removeObject(userEmail);
+    }
+    this.set('typingUsers', typingUsers);
+
+    const indicator = Ember.$(`.typing-indicator[data-user="${userEmail}"]`);
+    if (isTyping) {
+      indicator.show();
+    } else {
+      indicator.hide();
+    }
   },
 
   applyDeltaUpdate(delta) {
@@ -455,6 +554,41 @@ export default Ember.Controller.extend({
 
   actions: {
 
+    viewSharedUsers() {
+      const documentId = this.get('documentId');
+      if (!documentId) {
+        console.error("Document ID is not set.");
+        return;
+      }
+
+      Ember.$.ajax({
+        url: 'http://localhost:8080/DocsApp_war_exploded/GetSharedUsersServlet',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ uniqueId: documentId }),
+        headers: { 'X-CSRF-Token': this.get('csrfToken') },
+        xhrFields: { withCredentials: true },
+        success: (response) => {
+          if (response.status === "success") {
+            this.set('sharedUsers', response.sharedUsers);
+            Ember.$('#shared-users-popup').show();
+          } else {
+            console.warn("Failed to fetch shared users:", response.message);
+          }
+        },
+        error: (xhr, status, error) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }
+          console.error("AJAX Error:", status, error);
+        }
+      });
+    },
+
+    closeSharedUsersPopup() {
+      Ember.$('#shared-users-popup').hide();
+    },
+
     toggleFavorite() {
       this.toggleFavorite();
     },
@@ -493,6 +627,9 @@ export default Ember.Controller.extend({
           }
         },
         error: (xhr, status, error) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }
           console.error("AJAX Error:", status, error);
           alert("Error updating document title.");
         }
@@ -558,6 +695,9 @@ export default Ember.Controller.extend({
           }
         },
         error: (xhr, status, error) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }
           console.error("AJAX Error:", status, error);
           alert("Error sharing document.");
         }
@@ -573,6 +713,15 @@ export default Ember.Controller.extend({
       const content = Ember.$('.document-editor').html();
       this.sendContentUpdate(content);
       this.set('hasUnsavedChanges', true);
+
+      const socket = this.get('socket');
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'typingIndicator',
+          userEmail: this.get('loggedInUserEmail'),
+          isTyping: true
+        }));
+      }
     },
 
     saveDocument() {
@@ -621,6 +770,9 @@ export default Ember.Controller.extend({
         }
       },
       error: (xhr, status, error) => {
+        if (xhr.status === 401) {
+          this.logoutAndRedirect();
+        }
         console.error("AJAX Error:", status, error);
       }
     });

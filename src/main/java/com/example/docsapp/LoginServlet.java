@@ -92,8 +92,27 @@ public class LoginServlet extends HttpServlet {
                 return;
             }
 
+
+
+
             if (validateUser(email, password)) {
+
+                HttpSession session = request.getSession(true);
+                session.setMaxInactiveInterval(1800);
+                session.setAttribute("email", email);
+
+
+
+
+
                 failedAttempts.remove(clientIP);
+
+
+
+
+
+
+
 
                 String jwt = Jwts.builder()
                         .setSubject(email)

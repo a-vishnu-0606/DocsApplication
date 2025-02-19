@@ -6,6 +6,14 @@
   <div class="dashboard-content">
     <div class="top-bar">
       <input type="text" placeholder="Search documents..." class="search-bar" value={{searchQuery}} oninput={{action "updateSearchQuery" value="target.value"}}>
+
+      <div class="notification-icon" {{action "toggleNotifications"}}>
+        🔔
+        {{#if unreadNotificationsCount}}
+          <span class="notification-count">{{unreadNotificationsCount}}</span>
+        {{/if}}
+      </div>
+
       <label for="file-upload" class="upload-button">
         Upload
         <input
@@ -13,6 +21,7 @@
           type="file"
           style="display: none;"
           accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          onchange={{action "handleFileUpload"}}
         >
       </label>
 
@@ -21,6 +30,7 @@
       <div class="user-profile" {{action "toggleProfilePopup"}}>
         <img src="assets/profile-placeholder.jpg" alt="User">
       </div>
+
 
       {{#if isProfilePopupVisible}}
         <div class="profile-popup">
@@ -36,6 +46,23 @@
         </div>
       {{/if}}
 
+      {{#if isNotificationsVisible}}
+        <div class="notifications-popup">
+          <button class="close-popup" {{action "toggleNotifications"}}>✖</button>
+          <h3 class="notify">Notifications</h3>
+          <div class="notifications-list">
+            {{#each notifications as |notification|}}
+              <div class="notification-item {{if notification.is_read 'read' 'unread'}}">
+                <p>{{notification.message}}</p>
+                <small>{{notification.created_at}}</small>
+              </div>
+            {{else}}
+              <p class="notify">No new notifications.</p>
+            {{/each}}
+          </div>
+          <button class="mark-all-btn"{{action "markNotificationsAsRead"}}>Mark All as Read</button>
+        </div>
+      {{/if}}
     </div>
     <hr class="solid1">
     <br>

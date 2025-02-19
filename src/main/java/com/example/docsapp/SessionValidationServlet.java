@@ -33,6 +33,17 @@ public class SessionValidationServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
         JsonObject jsonResponse = new JsonObject();
 
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("email") == null) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "Session not found or invalid.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
+
         Cookie[] cookies = request.getCookies();
         String jwt = null;
 

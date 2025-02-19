@@ -207,6 +207,19 @@
   background-color: #0056b3;
 }
 
+
+.view {
+  padding: 8px 12px;
+  background-color: #53a3ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.view:hover {
+  background-color: #0056b3;
+}
 .divider {
   margin: 15px 0;
   border: 0.5px solid #ddd;
@@ -358,4 +371,73 @@
 
 .favorite {
   color: red;
+}
+
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.popup-content {
+  position: relative;
+}
+
+.close-popup {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.shared-users-list {
+  margin-top: 20px;
+}
+
+.shared-user {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.user-role{
+  margin-left: 50px;
+}
+
+.no-users {
+  color: #999;
+}
+
+.typing-indicators {
+  position: absolute;
+  z-index: 1000;
+}
+
+.typing-indicators {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none; /* Ensure the typing indicators don't interfere with user interactions */
+}
+
+.typing-indicator {
+  background: rgba(0, 128, 0, 0.8);
+  color: white;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.typing-indicator.hidden {
+  opacity: 0;
 }

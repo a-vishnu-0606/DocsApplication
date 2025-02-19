@@ -13,8 +13,8 @@ import com.google.gson.*;
 public class UpdatePermissionsServlet extends HttpServlet {
 
     private static final String DB_URL = System.getProperty("DB_URL", System.getenv("DB_URL"));
-    private static final String DB_USER = System.getProperty("DB_USER", System.getenv("DB_USER"));;
-    private static final String DB_PASSWORD = System.getProperty("DB_PASSWORD", System.getenv("DB_PASSWORD"));;
+    private static final String DB_USER = System.getProperty("DB_USER", System.getenv("DB_USER"));
+    private static final String DB_PASSWORD = System.getProperty("DB_PASSWORD", System.getenv("DB_PASSWORD"));
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
@@ -25,6 +25,19 @@ public class UpdatePermissionsServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
 
         JsonObject jsonResponse = new JsonObject();
+
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("email") == null) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "Session not found or invalid.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
+        String loggedInUserEmail = (String) session.getAttribute("email");
+
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             JsonParser parser = new JsonParser();
             JsonObject requestBody = parser.parse(request.getReader()).getAsJsonObject();
@@ -49,6 +62,14 @@ public class UpdatePermissionsServlet extends HttpServlet {
                 return;
             }
 
+            String loggedInUsername = getUsernameByEmail(conn, loggedInUserEmail);
+            if (loggedInUsername == null) {
+                jsonResponse.addProperty("status", "error");
+                jsonResponse.addProperty("message", "Logged-in user not found.");
+                out.print(jsonResponse.toString());
+                return;
+            }
+
             String query = "INSERT INTO permissions (user_id, document_id, role) VALUES (?, ?, ?) " +
                     "ON DUPLICATE KEY UPDATE role = ?";
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -58,6 +79,9 @@ public class UpdatePermissionsServlet extends HttpServlet {
                 stmt.setString(4, role);
                 stmt.executeUpdate();
             }
+
+            String notificationMessage = loggedInUsername + " has shared the document '" + getDocumentTitle(conn, docId) + "' with you as " + role + ".";
+            insertNotification(conn, userId, docId, role, notificationMessage);
 
             jsonResponse.addProperty("status", "success");
             out.print(jsonResponse.toString());
@@ -92,6 +116,41 @@ public class UpdatePermissionsServlet extends HttpServlet {
             }
         }
         return -1;
+    }
+
+    private String getDocumentTitle(Connection conn, int docId) throws SQLException {
+        String query = "SELECT title FROM Documents WHERE id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, docId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getString("title");
+            }
+        }
+        return "Untitled Document";
+    }
+
+    private String getUsernameByEmail(Connection conn, String email) throws SQLException {
+        String query = "SELECT username FROM users WHERE email = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getString("username");
+            }
+        }
+        return null;
+    }
+
+    private void insertNotification(Connection conn, int userId, int docId, String role, String message) throws SQLException {
+        String query = "INSERT INTO notifications (user_id, document_id, role, message) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, userId);
+            stmt.setInt(2, docId);
+            stmt.setString(3, role);
+            stmt.setString(4, message);
+            stmt.executeUpdate();
+        }
     }
 
     @Override
