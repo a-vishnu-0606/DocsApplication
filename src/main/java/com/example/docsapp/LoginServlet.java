@@ -98,9 +98,8 @@ public class LoginServlet extends HttpServlet {
             if (validateUser(email, password)) {
 
                 HttpSession session = request.getSession(true);
-                session.setMaxInactiveInterval(1800);
                 session.setAttribute("email", email);
-
+                session.setMaxInactiveInterval(1800);
 
 
 
