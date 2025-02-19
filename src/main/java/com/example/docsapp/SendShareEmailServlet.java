@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Properties;
 
 import com.google.gson.JsonObject;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.PasswordAuthentication;
@@ -13,17 +15,18 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.*;
 import org.json.JSONObject;
+
+import java.util.Date;
 
 import static java.lang.System.out;
 
 @WebServlet("/SendShareEmailServlet")
 public class SendShareEmailServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
+    private static final String JWT_SECRET = System.getProperty("JWT_SECRET", System.getenv("JWT_SECRET"));
+
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
@@ -39,6 +42,40 @@ public class SendShareEmailServlet extends HttpServlet {
             JsonObject error = new JsonObject();
             error.addProperty("status", "error");
             error.addProperty("message", "Session not found or invalid.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
+        Cookie[] cookies = request.getCookies();
+        String jwt = null;
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals("jwt")) {
+                    jwt = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (jwt == null) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "No JWT found.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
+        Claims claims = Jwts.parser()
+                .setSigningKey(JWT_SECRET)
+                .parseClaimsJws(jwt)
+                .getBody();
+
+        if (claims.getExpiration().before(new Date())) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "JWT has expired.");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             out.print(error.toString());
             return;

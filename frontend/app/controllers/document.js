@@ -553,6 +553,50 @@ export default Ember.Controller.extend({
   },
 
   actions: {
+    removeUserPermission(user) {
+      this.set('userToRemove', user);
+    },
+
+    removeUserPermissionConfirmed() {
+      const user = this.get('userToRemove');
+      const documentId = this.get('documentId');
+      const userEmail = user.email;
+
+      if (!documentId || !userEmail) {
+        console.error("Document ID or user email is not set.");
+        return;
+      }
+
+      Ember.$.ajax({
+        url: 'http://localhost:8080/DocsApp_war_exploded/RemoveUserPermissionServlet',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ uniqueId: documentId, email: userEmail }),
+        headers: { 'X-CSRF-Token': this.get('csrfToken') },
+        xhrFields: { withCredentials: true },
+        success: (response) => {
+          if (response.status === "success") {
+            const sharedUsers = this.get('sharedUsers');
+            sharedUsers.removeObject(user);
+            this.set('sharedUsers', sharedUsers);
+          } else {
+            console.warn("Failed to remove user permission:", response.message);
+          }
+        },
+        error: (xhr, status, error) => {
+          if (xhr.status === 401) {
+            this.logoutAndRedirect();
+          }
+          console.error("AJAX Error:", status, error);
+        }
+      });
+
+      this.set('userToRemove', null);
+    },
+
+    cancelRemoveUserPermission() {
+      this.set('userToRemove', null);
+    },
 
     viewSharedUsers() {
       const documentId = this.get('documentId');

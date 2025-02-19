@@ -81,12 +81,13 @@
 <div id="shared-users-popup" class="popup" style="display: none;">
   <div class="popup-content">
     <button class="close-popup" {{action "closeSharedUsersPopup"}}>&times;</button>
-    <h3 class="popup-title">Shared Users</h3>
+    <h3 class="popup-title1">Shared Users</h3>
     <div class="shared-users-list">
       {{#each sharedUsers as |user|}}
         <div class="shared-user">
-          <span class="user-email">{{user.email}}</span>
-          <span class="user-role">-   &nbsp;&nbsp;{{user.role}}</span>
+          <span class="user-email1">{{user.email}}</span>
+          <span class="user-role1">-   &nbsp;&nbsp;{{user.role}}</span>
+          <span class="delete-icon" {{action "removeUserPermission" user}}>&nbsp;&nbsp;⛔</span>
         </div>
       {{else}}
         <div class="no-users">No users have access to this document.</div>
@@ -134,3 +135,13 @@
     <h3>Document Shared Successfully!</h3>
   </div>
 </div>
+
+{{#if userToRemove}}
+  <div class="delete-confirmation-popup">
+    <div class="delete-confirmation-content">
+      <p>Are you sure you want to remove access "{{userToRemove.email}}" from this document?</p>
+      <button {{action "removeUserPermissionConfirmed"}}>Yes, Remove</button>
+      <button {{action "cancelRemoveUserPermission"}}>Cancel</button>
+    </div>
+  </div>
+{{/if}}

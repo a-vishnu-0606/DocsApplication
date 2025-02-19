@@ -11,6 +11,7 @@ export default Ember.Controller.extend({
   notifications: [],
   isNotificationsVisible: false,
 
+
   filteredDocuments: Ember.computed('userDocuments.[]', 'searchQuery', function() {
     const searchQuery = this.get('searchQuery').toLowerCase();
     const userDocuments = this.get('userDocuments');
@@ -41,7 +42,7 @@ export default Ember.Controller.extend({
       url: 'http://localhost:8080/DocsApp_war_exploded/LogoutServlet',
       type: 'POST',
       headers: {
-        'X-CSRF-Token': this.get('csrfToken')
+        'X-CSRF-Token': this.get('csrfToken'),
       },
       xhrFields: {
         withCredentials: true

@@ -98,7 +98,6 @@ public class DocumentWebSocket {
                         typingMessage.addProperty("isTyping", true);
                         s.getBasicRemote().sendText(typingMessage.toString());
 
-                        // Schedule the stop typing message
                         scheduler.schedule(() -> {
                             try {
                                 if (s.isOpen()) {

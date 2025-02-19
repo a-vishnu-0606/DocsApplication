@@ -1,7 +1,5 @@
 package com.example.docsapp;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.ServletException;
@@ -12,16 +10,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
 import java.util.Date;
+import com.google.gson.*;
 
-@WebServlet("/DeleteDocumentServlet")
-public class DeleteDocumentServlet extends HttpServlet {
+@WebServlet("/RemoveUserPermissionServlet")
+public class RemoveUserPermissionServlet extends HttpServlet {
 
     private static final String DB_URL = System.getProperty("DB_URL", System.getenv("DB_URL"));
     private static final String DB_USER = System.getProperty("DB_USER", System.getenv("DB_USER"));
     private static final String DB_PASSWORD = System.getProperty("DB_PASSWORD", System.getenv("DB_PASSWORD"));
     private static final String JWT_SECRET = System.getProperty("JWT_SECRET", System.getenv("JWT_SECRET"));
 
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setHeader("Access-Control-Allow-Origin", "http://localhost:4200");
         response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
         response.setHeader("Access-Control-Allow-Headers", "Content-Type, X-CSRF-Token");
@@ -73,27 +72,58 @@ public class DeleteDocumentServlet extends HttpServlet {
             return;
         }
 
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            JsonObject json = new JsonParser().parse(request.getReader()).getAsJsonObject();
-            String email = json.get("email").getAsString();
-            String uniqueId = json.get("uniqueId").getAsString();
+        try {
+            JsonObject requestBody = JsonParser.parseReader(request.getReader()).getAsJsonObject();
+            String uniqueId = requestBody.get("uniqueId").getAsString();
+            String email = requestBody.get("email").getAsString();
 
-            // Delete the document
-            String deleteQuery = "DELETE FROM Documents WHERE uniqueId = ? AND user_id = (SELECT id FROM users WHERE email = ?)";
-            try (PreparedStatement stmt = conn.prepareStatement(deleteQuery)) {
-                stmt.setString(1, uniqueId);
-                stmt.setString(2, email);
-                int rowsAffected = stmt.executeUpdate();
+            try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+                String userIdQuery = "SELECT id FROM users WHERE email = ?";
+                try (PreparedStatement userIdStmt = conn.prepareStatement(userIdQuery)) {
+                    userIdStmt.setString(1, email);
+                    ResultSet userIdRs = userIdStmt.executeQuery();
+                    if (!userIdRs.next()) {
+                        JsonObject error = new JsonObject();
+                        error.addProperty("status", "error");
+                        error.addProperty("message", "User not found.");
+                        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print(error.toString());
+                        return;
+                    }
+                    int userId = userIdRs.getInt("id");
 
-                JsonObject result = new JsonObject();
-                if (rowsAffected > 0) {
-                    result.addProperty("status", "success");
-                    result.addProperty("message", "Document deleted successfully.");
-                } else {
-                    result.addProperty("status", "error");
-                    result.addProperty("message", "Document not found or you do not have permission to delete it.");
+                    String documentIdQuery = "SELECT id FROM Documents WHERE uniqueId = ?";
+                    try (PreparedStatement documentIdStmt = conn.prepareStatement(documentIdQuery)) {
+                        documentIdStmt.setString(1, uniqueId);
+                        ResultSet documentIdRs = documentIdStmt.executeQuery();
+                        if (!documentIdRs.next()) {
+                            JsonObject error = new JsonObject();
+                            error.addProperty("status", "error");
+                            error.addProperty("message", "Document not found.");
+                            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                            out.print(error.toString());
+                            return;
+                        }
+                        int documentId = documentIdRs.getInt("id");
+                        String deletePermissionQuery = "DELETE FROM permissions WHERE user_id = ? AND document_id = ?";
+                        try (PreparedStatement deletePermissionStmt = conn.prepareStatement(deletePermissionQuery)) {
+                            deletePermissionStmt.setInt(1, userId);
+                            deletePermissionStmt.setInt(2, documentId);
+                            int rowsDeleted = deletePermissionStmt.executeUpdate();
+                            if (rowsDeleted > 0) {
+                                JsonObject success = new JsonObject();
+                                success.addProperty("status", "success");
+                                out.print(success.toString());
+                            } else {
+                                JsonObject error = new JsonObject();
+                                error.addProperty("status", "error");
+                                error.addProperty("message", "Permission not found.");
+                                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                                out.print(error.toString());
+                            }
+                        }
+                    }
                 }
-                out.print(result.toString());
             }
         } catch (Exception e) {
             e.printStackTrace();

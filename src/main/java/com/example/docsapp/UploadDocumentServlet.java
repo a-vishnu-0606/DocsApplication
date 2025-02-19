@@ -1,5 +1,7 @@
 package com.example.docsapp;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -7,6 +9,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
 import com.google.gson.*;
+import java.util.Date;
 
 @WebServlet("/UploadDocumentServlet")
 public class UploadDocumentServlet extends HttpServlet {
@@ -14,6 +17,7 @@ public class UploadDocumentServlet extends HttpServlet {
     private static final String DB_URL = System.getProperty("DB_URL", System.getenv("DB_URL"));
     private static final String DB_USER = System.getProperty("DB_USER", System.getenv("DB_USER"));
     private static final String DB_PASSWORD = System.getProperty("DB_PASSWORD", System.getenv("DB_PASSWORD"));
+    private static final String JWT_SECRET = System.getProperty("JWT_SECRET", System.getenv("JWT_SECRET"));
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -29,6 +33,40 @@ public class UploadDocumentServlet extends HttpServlet {
             JsonObject error = new JsonObject();
             error.addProperty("status", "error");
             error.addProperty("message", "Session not found or invalid.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
+        Cookie[] cookies = request.getCookies();
+        String jwt = null;
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals("jwt")) {
+                    jwt = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        if (jwt == null) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "No JWT found.");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print(error.toString());
+            return;
+        }
+
+        Claims claims = Jwts.parser()
+                .setSigningKey(JWT_SECRET)
+                .parseClaimsJws(jwt)
+                .getBody();
+
+        if (claims.getExpiration().before(new Date())) {
+            JsonObject error = new JsonObject();
+            error.addProperty("status", "error");
+            error.addProperty("message", "JWT has expired.");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             out.print(error.toString());
             return;

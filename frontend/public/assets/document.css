@@ -398,22 +398,7 @@
   cursor: pointer;
 }
 
-.shared-users-list {
-  margin-top: 20px;
-}
 
-.shared-user {
-  display: flex;
-  margin-bottom: 10px;
-}
-
-.user-role{
-  margin-left: 50px;
-}
-
-.no-users {
-  color: #999;
-}
 
 .typing-indicators {
   position: absolute;
@@ -440,4 +425,114 @@
 
 .typing-indicator.hidden {
   opacity: 0;
+}
+
+
+.delete-confirmation-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.delete-confirmation-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.delete-confirmation-content p {
+  margin-bottom: 20px;
+}
+
+.delete-confirmation-content button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.delete-confirmation-content button:first-of-type {
+  background-color: #ff4d4d;
+  color: white;
+}
+
+.delete-confirmation-content button:last-of-type {
+  background-color: #ccc;
+  color: black;
+}
+
+.close-popup {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #888;
+}
+
+.close-popup:hover {
+  color: #333;
+}
+
+.popup-title1 {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.shared-users-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.shared-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.shared-user:last-child {
+  border-bottom: none;
+}
+
+.user-email1 {
+  font-size: 14px;
+  color: #555;
+}
+
+.user-role1 {
+  font-size: 14px;
+  color: #777;
+}
+
+.delete-icon {
+  cursor: pointer;
+  color: #ff4d4d;
+  font-size: 16px;
+}
+
+.delete-icon:hover {
+  color: #cc0000;
+}
+
+.no-users {
+  font-size: 14px;
+  color: #888;
+  text-align: center;
+  padding: 20px;
 }

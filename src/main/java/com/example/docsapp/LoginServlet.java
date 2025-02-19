@@ -97,11 +97,17 @@ public class LoginServlet extends HttpServlet {
 
             if (validateUser(email, password)) {
 
+                HttpSession oldSession = request.getSession(false);
+                if (oldSession != null) {
+                    oldSession.invalidate();
+                }
+
                 HttpSession session = request.getSession(true);
                 session.setAttribute("email", email);
-                session.setMaxInactiveInterval(1800);
+                session.setMaxInactiveInterval(1200);
 
 
+                request.changeSessionId();
 
 
                 failedAttempts.remove(clientIP);
@@ -131,6 +137,7 @@ public class LoginServlet extends HttpServlet {
                 csrfCookie.setSecure(true);
                 csrfCookie.setPath("/");
                 response.addCookie(csrfCookie);
+
 
                 jsonResponse.addProperty("status", "success");
                 jsonResponse.addProperty("message", "Login successful!");
